@@ -1,0 +1,99 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+build/
+out/
+.next/
+.nuxt/
+.cache/
+
+# Vite
+vite.config.*.timestamp-*
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# IDE and editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*.sublime-workspace
+*.sublime-project
+.fleet/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# Test coverage
+coverage/
+*.lcov
+.nyc_output/
+
+# TypeScript
+*.tsbuildinfo
+
+# Tauri
+code/src-tauri/target/
+code/src-tauri/Cargo.lock
+
+# Rust
+target/
+**/*.rs.bk
+Cargo.lock
+
+# Build artifacts
+*.dmg
+*.app
+*.exe
+*.msi
+*.AppImage
+*.deb
+*.rpm
+*.snap
+
+# Debug files
+*.pdb
+*.ilk
+*.obj
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# OS junk files
+*~
+
+# Qoder
+.qoder/
