@@ -175,12 +175,12 @@ export function Sidebar({ onRepoSelect }: SidebarProps) {
                         {repo.name}
                       </span>
                     </div>
-                    <div className="mt-1 flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                      <span className="flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
-                        {repo.currentBranch}
+                    <div className="mt-1 flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 min-w-0">
+                      <span className="flex items-center gap-1 min-w-0 flex-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0"></span>
+                        <span className="truncate">{repo.currentBranch}</span>
                       </span>
-                      <span>{repo.worktreeCount} wt</span>
+                      <span className="flex-shrink-0">{repo.worktreeCount} wt</span>
                     </div>
                   </div>
                   <button
