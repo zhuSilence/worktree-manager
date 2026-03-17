@@ -1,4 +1,4 @@
-use crate::models::{CreateWorktreeParams, Worktree, WorktreeListResponse, WorktreeResult, WorktreeStatus, Branch, BranchListResponse, LastCommit, DiffStats, DiffResponse, DiffLine, DiffHunk, FileDiff, DetailedDiffResponse};
+use crate::models::{CreateWorktreeParams, Worktree, WorktreeListResponse, WorktreeResult, WorktreeStatus, Branch, BranchListResponse, LastCommit, DiffStats, DiffResponse, DiffLine, DiffHunk, FileDiff, DetailedDiffResponse, RepositoryInfo};
 use crate::utils::validation::{sanitize_branch_name, validate_path};
 use git2::Repository;
 use std::path::Path;
@@ -725,5 +725,35 @@ pub fn get_detailed_diff(worktree_path: &str, target_branch: &str) -> anyhow::Re
         files,
         total_additions,
         total_deletions,
+    })
+}
+
+/// 获取仓库基本信息
+pub fn get_repository_info(repo_path: &str) -> anyhow::Result<RepositoryInfo> {
+    let repo = Repository::open(repo_path)?;
+    
+    // 获取仓库名称
+    let name = Path::new(repo_path)
+        .file_name()
+        .map(|n| n.to_string_lossy().to_string())
+        .unwrap_or_else(|| repo_path.to_string());
+    
+    // 获取当前分支
+    let current_branch = repo.head()
+        .ok()
+        .and_then(|h| h.shorthand().map(String::from))
+        .unwrap_or_else(|| "unknown".to_string());
+    
+    // 获取 worktree 数量
+    let worktrees = repo.worktrees()?;
+    let worktree_count = worktrees.len() + 1; // +1 for main worktree
+    
+    Ok(RepositoryInfo {
+        id: repo_path.to_string(),
+        name,
+        path: repo_path.to_string(),
+        current_branch,
+        worktree_count,
+        last_active: None,
     })
 }

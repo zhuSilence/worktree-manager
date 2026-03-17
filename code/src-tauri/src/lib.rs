@@ -30,6 +30,7 @@ pub fn run() {
             commands::worktree::list_branches,
             commands::worktree::get_diff,
             commands::worktree::get_detailed_diff,
+            commands::worktree::get_repository_info,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

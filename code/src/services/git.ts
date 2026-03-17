@@ -7,6 +7,7 @@ import type {
   BranchListResponse,
   DiffResponse,
   DetailedDiffResponse,
+  RepositoryInfo,
 } from '@/types/worktree'
 import type { IdeType, TerminalType } from '@/stores/settingsStore'
 
@@ -113,5 +114,12 @@ export const gitService = {
    */
   async getDetailedDiff(worktreePath: string, targetBranch: string): Promise<DetailedDiffResponse> {
     return invoke<DetailedDiffResponse>('get_detailed_diff', { worktreePath, targetBranch })
+  },
+
+  /**
+   * 获取仓库基本信息
+   */
+  async getRepositoryInfo(repoPath: string): Promise<RepositoryInfo> {
+    return invoke<RepositoryInfo>('get_repository_info', { repoPath })
   },
 }

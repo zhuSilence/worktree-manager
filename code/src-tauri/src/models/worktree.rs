@@ -183,3 +183,20 @@ pub struct DetailedDiffResponse {
     /// 总删除行数
     pub total_deletions: usize,
 }
+
+/// 仓库信息
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RepositoryInfo {
+    /// 仓库 ID (路径)
+    pub id: String,
+    /// 仓库名称
+    pub name: String,
+    /// 路径
+    pub path: String,
+    /// 当前分支
+    pub current_branch: String,
+    /// Worktree 数量
+    pub worktree_count: usize,
+    /// 最后活跃时间
+    pub last_active: Option<String>,
+}

@@ -215,3 +215,21 @@ export interface DetailedDiffResponse {
   /** 总删除行数 */
   totalDeletions: number
 }
+
+/**
+ * 仓库信息
+ */
+export interface RepositoryInfo {
+  /** 仓库 ID (路径) */
+  id: string
+  /** 仓库名称 */
+  name: string
+  /** 路径 */
+  path: string
+  /** 当前分支 */
+  currentBranch: string
+  /** Worktree 数量 */
+  worktreeCount: number
+  /** 最后活跃时间 */
+  lastActive: string | null
+}

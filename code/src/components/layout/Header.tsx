@@ -1,7 +1,5 @@
-import { useState } from 'react'
-import { GitBranch, FolderOpen, Settings, RefreshCw, Plus } from 'lucide-react'
+import { GitBranch, Settings, RefreshCw, Plus } from 'lucide-react'
 import { Button } from '@/components/common'
-import { open } from '@tauri-apps/plugin-dialog'
 import { useWorktreeStore } from '@/stores/worktreeStore'
 
 interface HeaderProps {
@@ -10,34 +8,14 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ onCreateWorktree, onOpenSettings }) => {
-  const { currentRepo, loadRepository, refreshWorktrees, isLoading } = useWorktreeStore()
-  const [isOpening, setIsOpening] = useState(false)
-
-  const handleOpenRepo = async () => {
-    try {
-      setIsOpening(true)
-      const selected = await open({
-        directory: true,
-        multiple: false,
-        title: '选择 Git 仓库',
-      })
-      
-      if (selected && typeof selected === 'string') {
-        await loadRepository(selected)
-      }
-    } catch (error) {
-      console.error('Failed to open repository:', error)
-    } finally {
-      setIsOpening(false)
-    }
-  }
+  const { currentRepo, refreshWorktrees, isLoading } = useWorktreeStore()
 
   const handleRefresh = async () => {
     await refreshWorktrees()
   }
 
   return (
-    <header className="h-14 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+    <header className="h-14 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex-shrink-0">
       <div className="flex h-full items-center justify-between px-4">
         <div className="flex items-center gap-3">
           <GitBranch className="h-5 w-5 text-green-500" />
@@ -52,17 +30,6 @@ export const Header: React.FC<HeaderProps> = ({ onCreateWorktree, onOpenSettings
         </div>
 
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleOpenRepo}
-            disabled={isOpening || isLoading}
-            className="flex items-center gap-2"
-          >
-            <FolderOpen className="h-4 w-4" />
-            打开仓库
-          </Button>
-          
           {currentRepo && (
             <>
               <Button

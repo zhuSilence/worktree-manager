@@ -83,3 +83,9 @@ pub async fn get_diff(worktree_path: String, target_branch: String) -> Result<cr
 pub async fn get_detailed_diff(worktree_path: String, target_branch: String) -> Result<crate::models::DetailedDiffResponse, String> {
     git_service::get_detailed_diff(&worktree_path, &target_branch).map_err(|e| e.to_string())
 }
+
+/// 获取仓库基本信息
+#[command]
+pub async fn get_repository_info(repo_path: String) -> Result<crate::models::RepositoryInfo, String> {
+    git_service::get_repository_info(&repo_path).map_err(|e| e.to_string())
+}
