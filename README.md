@@ -59,21 +59,54 @@
 
 ---
 
-## 🚀 快速开始
+## 📦 安装
+
+### macOS / Linux (一键安装)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/zhuSilence/git-worktree-manager/main/install.sh | bash
+```
+
+### Windows (PowerShell)
+
+```powershell
+irm https://raw.githubusercontent.com/zhuSilence/git-worktree-manager/main/install.ps1 | iex
+```
+
+### 手动下载
+
+前往 [Releases](https://github.com/zhuSilence/git-worktree-manager/releases) 页面下载对应平台的安装包：
+
+| 平台 | 文件格式 | 说明 |
+|------|----------|------|
+| **macOS (Apple Silicon)** | `.dmg` | M1/M2/M3 芯片 |
+| **macOS (Intel)** | `.dmg` | Intel 芯片 |
+| **Windows** | `.msi` / `.exe` | 安装程序 |
+| **Linux** | `.deb` / `.AppImage` | Debian/Ubuntu 或通用 |
+
+### Homebrew (macOS)
+
+```bash
+brew tap zhuSilence/git-worktree-manager
+brew install git-worktree-manager
+```
+
+---
+
+## 🛠️ 从源码构建
 
 ### 环境要求
 
 - **Node.js** >= 18
 - **Rust** >= 1.70
 - **Git** >= 2.5 (建议 2.17+)
-- **操作系统**: macOS 10.15+ / Windows 10+ / Ubuntu 18.04+
 
-### 安装依赖
+### 构建步骤
 
 ```bash
 # 克隆仓库
 git clone https://github.com/zhuSilence/git-worktree-manager.git
-cd git-git-worktree-manager/code
+cd git-worktree-manager/code
 
 # 安装前端依赖
 npm install
