@@ -1,22 +1,25 @@
 import { useState } from 'react'
 import { Worktree } from '@/types/worktree'
 import { StatusBadge } from './StatusBadge'
-import { Folder, ExternalLink, Terminal, Trash2, GitCompare } from 'lucide-react'
+import { Folder, ExternalLink, Terminal, Trash2, GitCompare, GitBranch } from 'lucide-react'
 import { gitService } from '@/services/git'
 import { useWorktreeStore } from '@/stores/worktreeStore'
 import { settingsStore } from '@/stores/settingsStore'
 import { DiffPanel } from '@/components/DiffPanel'
+import { BranchManager } from '@/components/BranchManager'
 
 interface WorktreeItemProps {
   worktree: Worktree
+  branches: { name: string; isCurrent: boolean }[]
 }
 
-export function WorktreeItem({ worktree }: WorktreeItemProps) {
+export function WorktreeItem({ worktree, branches }: WorktreeItemProps) {
   const { deleteWorktree } = useWorktreeStore()
   const { defaultIde, defaultTerminal } = settingsStore()
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [showDiff, setShowDiff] = useState(false)
+  const [showBranchManager, setShowBranchManager] = useState(false)
 
   const handleOpenInTerminal = async () => {
     try {
@@ -115,6 +118,13 @@ export function WorktreeItem({ worktree }: WorktreeItemProps) {
           {/* 右侧：操作按钮 */}
           <div className="flex items-center gap-1 ml-4">
             <button
+              onClick={() => setShowBranchManager(true)}
+              className="p-2 text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+              title="分支管理"
+            >
+              <GitBranch className="w-4 h-4" />
+            </button>
+            <button
               onClick={() => setShowDiff(true)}
               className="p-2 text-gray-500 hover:text-purple-600 dark:text-gray-400 dark:hover:text-purple-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
               title="查看与主分支差异"
@@ -194,6 +204,15 @@ export function WorktreeItem({ worktree }: WorktreeItemProps) {
         onClose={() => setShowDiff(false)}
         worktreePath={worktree.path}
         worktreeName={worktree.name}
+      />
+
+      {/* 分支管理 */}
+      <BranchManager
+        isOpen={showBranchManager}
+        onClose={() => setShowBranchManager(false)}
+        worktreePath={worktree.path}
+        worktreeBranch={worktree.branch}
+        branches={branches}
       />
     </>
   )

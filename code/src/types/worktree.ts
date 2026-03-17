@@ -233,3 +233,38 @@ export interface RepositoryInfo {
   /** 最后活跃时间 */
   lastActive: string | null
 }
+
+/**
+ * 切换分支结果
+ */
+export interface SwitchBranchResult {
+  success: boolean
+  message: string
+}
+
+/**
+ * 批量删除结果
+ */
+export interface BatchDeleteResult {
+  successCount: number
+  failedCount: number
+  results: WorktreeResult[]
+}
+
+/**
+ * Worktree 提示信息
+ */
+export interface WorktreeHint {
+  /** Worktree ID */
+  worktreeId: string
+  /** 分支名 */
+  branch: string
+  /** 提示类型: "merged" | "stale" */
+  hintType: string
+  /** 提示消息 */
+  message: string
+  /** 是否已合并 */
+  isMerged: boolean
+  /** 最后活跃天数 */
+  inactiveDays: number | null
+}

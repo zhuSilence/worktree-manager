@@ -89,3 +89,39 @@ pub async fn get_detailed_diff(worktree_path: String, target_branch: String) -> 
 pub async fn get_repository_info(repo_path: String) -> Result<crate::models::RepositoryInfo, String> {
     git_service::get_repository_info(&repo_path).map_err(|e| e.to_string())
 }
+
+/// 切换分支
+#[command]
+pub async fn switch_branch(worktree_path: String, branch_name: String) -> Result<crate::models::SwitchBranchResult, String> {
+    git_service::switch_branch(&worktree_path, &branch_name).map_err(|e| e.to_string())
+}
+
+/// 创建并切换到新分支
+#[command]
+pub async fn create_branch(worktree_path: String, branch_name: String, base_branch: Option<String>) -> Result<crate::models::SwitchBranchResult, String> {
+    git_service::create_and_switch_branch(&worktree_path, &branch_name, base_branch.as_deref()).map_err(|e| e.to_string())
+}
+
+/// 拉取远程分支
+#[command]
+pub async fn fetch_remote_branch(repo_path: String, remote_branch: String, local_branch: Option<String>) -> Result<crate::models::SwitchBranchResult, String> {
+    git_service::fetch_and_checkout(&repo_path, &remote_branch, local_branch.as_deref()).map_err(|e| e.to_string())
+}
+
+/// 批量删除 worktree
+#[command]
+pub async fn batch_delete_worktrees(repo_path: String, worktree_paths: Vec<String>, force: bool) -> Result<crate::models::BatchDeleteResult, String> {
+    git_service::batch_delete_worktrees(&repo_path, worktree_paths, force).map_err(|e| e.to_string())
+}
+
+/// 获取已合并提示
+#[command]
+pub async fn get_merged_hints(repo_path: String, main_branch: String) -> Result<Vec<crate::models::WorktreeHint>, String> {
+    git_service::get_merged_hints(&repo_path, &main_branch).map_err(|e| e.to_string())
+}
+
+/// 获取陈旧提示
+#[command]
+pub async fn get_stale_hints(repo_path: String, days: i64) -> Result<Vec<crate::models::WorktreeHint>, String> {
+    git_service::get_stale_hints(&repo_path, days).map_err(|e| e.to_string())
+}

@@ -1,10 +1,12 @@
 import { useState, useMemo } from 'react'
 import { WorktreeItem } from './WorktreeItem'
 import { useWorktreeStore } from '@/stores/worktreeStore'
-import { GitBranch, Plus, Search, ArrowUpDown } from 'lucide-react'
+import { GitBranch, Plus, Search, ArrowUpDown, AlertTriangle, Trash2 } from 'lucide-react'
 import { Button } from '@/components/common'
 import type { Worktree } from '@/types/worktree'
 import { WorktreeStatus } from '@/types/worktree'
+import { HintsPanel } from '@/components/HintsPanel'
+import { BatchActions } from '@/components/BatchActions'
 
 type SortField = 'name' | 'status' | 'time'
 type SortOrder = 'asc' | 'desc'
@@ -14,10 +16,15 @@ interface WorktreeListProps {
 }
 
 export function WorktreeList({ onCreateWorktree }: WorktreeListProps) {
-  const { worktrees, isLoading } = useWorktreeStore()
+  const { worktrees, isLoading, currentRepo } = useWorktreeStore()
   const [searchQuery, setSearchQuery] = useState('')
   const [sortField, setSortField] = useState<SortField>('name')
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc')
+  const [showHints, setShowHints] = useState(false)
+  const [showBatchActions, setShowBatchActions] = useState(false)
+
+  // 获取分支列表
+  const branches = currentRepo?.branches || []
 
   // 过滤和排序
   const filteredAndSortedWorktrees = useMemo(() => {
@@ -134,6 +141,26 @@ export function WorktreeList({ onCreateWorktree }: WorktreeListProps) {
               状态
             </button>
           </div>
+
+          {/* 智能提示按钮 */}
+          <button
+            onClick={() => setShowHints(true)}
+            className="p-1.5 text-gray-400 hover:text-yellow-500 dark:hover:text-yellow-400 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+            title="智能提示"
+          >
+            <AlertTriangle className="w-4 h-4" />
+          </button>
+
+          {/* 批量删除按钮 */}
+          {worktrees.filter(w => !w.isMain).length > 1 && (
+            <button
+              onClick={() => setShowBatchActions(true)}
+              className="p-1.5 text-gray-400 hover:text-red-500 dark:hover:text-red-400 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+              title="批量删除"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
         </div>
         
         <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400">
@@ -147,7 +174,7 @@ export function WorktreeList({ onCreateWorktree }: WorktreeListProps) {
       {/* 列表 */}
       <div className="space-y-2">
         {filteredAndSortedWorktrees.map((worktree) => (
-          <WorktreeItem key={worktree.id} worktree={worktree} />
+          <WorktreeItem key={worktree.id} worktree={worktree} branches={branches} />
         ))}
       </div>
       
@@ -157,6 +184,22 @@ export function WorktreeList({ onCreateWorktree }: WorktreeListProps) {
           <p>未找到匹配 "{searchQuery}" 的 Worktree</p>
         </div>
       )}
+
+      {/* 智能提示面板 */}
+      <HintsPanel
+        isOpen={showHints}
+        onClose={() => setShowHints(false)}
+        repoPath={currentRepo?.mainWorktreePath || ''}
+        mainBranch="main"
+      />
+
+      {/* 批量操作面板 */}
+      <BatchActions
+        isOpen={showBatchActions}
+        onClose={() => setShowBatchActions(false)}
+        worktrees={worktrees}
+        repoPath={currentRepo?.mainWorktreePath || ''}
+      />
     </div>
   )
 }

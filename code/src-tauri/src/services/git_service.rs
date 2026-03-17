@@ -1,4 +1,4 @@
-use crate::models::{CreateWorktreeParams, Worktree, WorktreeListResponse, WorktreeResult, WorktreeStatus, Branch, BranchListResponse, LastCommit, DiffStats, DiffResponse, DiffLine, DiffHunk, FileDiff, DetailedDiffResponse, RepositoryInfo};
+use crate::models::{CreateWorktreeParams, Worktree, WorktreeListResponse, WorktreeResult, WorktreeStatus, Branch, BranchListResponse, LastCommit, DiffStats, DiffResponse, DiffLine, DiffHunk, FileDiff, DetailedDiffResponse, RepositoryInfo, SwitchBranchResult, BatchDeleteResult, WorktreeHint};
 use crate::utils::validation::{sanitize_branch_name, validate_path};
 use git2::Repository;
 use std::path::Path;
@@ -756,4 +756,215 @@ pub fn get_repository_info(repo_path: &str) -> anyhow::Result<RepositoryInfo> {
         worktree_count,
         last_active: None,
     })
+}
+
+/// 切换分支
+pub fn switch_branch(worktree_path: &str, branch_name: &str) -> anyhow::Result<SwitchBranchResult> {
+    // 验证分支名
+    let branch = sanitize_branch_name(branch_name)
+        .map_err(|e| anyhow::anyhow!("Invalid branch name: {}", e))?;
+    
+    // 使用 git checkout 命令
+    let output = Command::new("git")
+        .args(["checkout", &branch])
+        .current_dir(worktree_path)
+        .output()?;
+    
+    if !output.status.success() {
+        return Ok(SwitchBranchResult {
+            success: false,
+            message: String::from_utf8_lossy(&output.stderr).to_string(),
+        });
+    }
+    
+    Ok(SwitchBranchResult {
+        success: true,
+        message: format!("Switched to branch '{}'", branch),
+    })
+}
+
+/// 创建并切换到新分支
+pub fn create_and_switch_branch(worktree_path: &str, branch_name: &str, base_branch: Option<&str>) -> anyhow::Result<SwitchBranchResult> {
+    // 验证分支名
+    let branch = sanitize_branch_name(branch_name)
+        .map_err(|e| anyhow::anyhow!("Invalid branch name: {}", e))?;
+    
+    let mut args = vec!["checkout", "-b", &branch];
+    if let Some(base) = base_branch {
+        args.push(base);
+    }
+    
+    let output = Command::new("git")
+        .args(&args)
+        .current_dir(worktree_path)
+        .output()?;
+    
+    if !output.status.success() {
+        return Ok(SwitchBranchResult {
+            success: false,
+            message: String::from_utf8_lossy(&output.stderr).to_string(),
+        });
+    }
+    
+    Ok(SwitchBranchResult {
+        success: true,
+        message: format!("Created and switched to branch '{}'", branch),
+    })
+}
+
+/// 拉取远程分支
+pub fn fetch_and_checkout(repo_path: &str, remote_branch: &str, local_branch: Option<&str>) -> anyhow::Result<SwitchBranchResult> {
+    // 先 fetch
+    let fetch_output = Command::new("git")
+        .args(["fetch", "origin"])
+        .current_dir(repo_path)
+        .output()?;
+    
+    if !fetch_output.status.success() {
+        return Ok(SwitchBranchResult {
+            success: false,
+            message: "Failed to fetch from remote".to_string(),
+        });
+    }
+    
+    // checkout 远程分支
+    let local = local_branch.unwrap_or(remote_branch);
+    let checkout_output = Command::new("git")
+        .args(["checkout", "-b", local, &format!("origin/{}", remote_branch)])
+        .current_dir(repo_path)
+        .output()?;
+    
+    if !checkout_output.status.success() {
+        // 尝试直接 checkout
+        let retry_output = Command::new("git")
+            .args(["checkout", remote_branch])
+            .current_dir(repo_path)
+            .output()?;
+        
+        if !retry_output.status.success() {
+            return Ok(SwitchBranchResult {
+                success: false,
+                message: String::from_utf8_lossy(&retry_output.stderr).to_string(),
+            });
+        }
+    }
+    
+    Ok(SwitchBranchResult {
+        success: true,
+        message: format!("Checked out remote branch '{}'", remote_branch),
+    })
+}
+
+/// 批量删除 worktree
+pub fn batch_delete_worktrees(repo_path: &str, worktree_paths: Vec<String>, force: bool) -> anyhow::Result<BatchDeleteResult> {
+    let mut success_count = 0;
+    let mut failed_count = 0;
+    let mut results = Vec::new();
+    
+    for path in worktree_paths {
+        let result = delete_worktree(repo_path, &path, force).unwrap_or_else(|e| WorktreeResult {
+            success: false,
+            message: e.to_string(),
+            worktree: None,
+        });
+        
+        if result.success {
+            success_count += 1;
+        } else {
+            failed_count += 1;
+        }
+        
+        results.push(result);
+    }
+    
+    Ok(BatchDeleteResult {
+        success_count,
+        failed_count,
+        results,
+    })
+}
+
+/// 获取已合并但未删除的 worktree 提示
+pub fn get_merged_hints(repo_path: &str, main_branch: &str) -> anyhow::Result<Vec<WorktreeHint>> {
+    let repo = Repository::open(repo_path)?;
+    let mut hints = Vec::new();
+    
+    // 获取主分支的 commit
+    let main_ref = format!("refs/heads/{}", main_branch);
+    let main_commit = match repo.find_reference(&main_ref) {
+        Ok(r) => r.peel_to_commit()?,
+        Err(_) => return Ok(hints), // 主分支不存在，返回空
+    };
+    
+    // 检查每个 worktree
+    let worktrees_response = list_worktrees(repo_path)?;
+    for worktree in worktrees_response.worktrees {
+        if worktree.is_main {
+            continue;
+        }
+        
+        // 检查分支是否已合并
+        let branch_ref = format!("refs/heads/{}", worktree.branch);
+        if let Ok(branch_ref_obj) = repo.find_reference(&branch_ref) {
+            if let Ok(branch_commit) = branch_ref_obj.peel_to_commit() {
+                // 检查是否已合并到主分支
+                let is_merged = repo.merge_base(main_commit.id(), branch_commit.id())
+                    .map(|base| base == branch_commit.id())
+                    .unwrap_or(false);
+                
+                if is_merged {
+                    hints.push(WorktreeHint {
+                        worktree_id: worktree.id.clone(),
+                        branch: worktree.branch.clone(),
+                        hint_type: "merged".to_string(),
+                        message: format!("分支 '{}' 已合并到 {}，可以删除", worktree.branch, main_branch),
+                        is_merged: true,
+                        inactive_days: None,
+                    });
+                }
+            }
+        }
+    }
+    
+    Ok(hints)
+}
+
+/// 获取陈旧 worktree 提示
+pub fn get_stale_hints(repo_path: &str, days: i64) -> anyhow::Result<Vec<WorktreeHint>> {
+    let repo = Repository::open(repo_path)?;
+    let mut hints = Vec::new();
+    
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)?
+        .as_secs() as i64;
+    
+    let threshold_seconds = days * 86400;
+    
+    // 检查每个 worktree
+    let worktrees_response = list_worktrees(repo_path)?;
+    for worktree in worktrees_response.worktrees {
+        // 打开 worktree 的仓库获取最后提交时间
+        if let Ok(wt_repo) = Repository::open(&worktree.path) {
+            if let Ok(head) = wt_repo.head() {
+                if let Ok(commit) = head.peel_to_commit() {
+                    let commit_time = commit.time().seconds();
+                    let inactive_seconds = now - commit_time;
+                    
+                    if inactive_seconds > threshold_seconds {
+                        let inactive_days = inactive_seconds / 86400;
+                        hints.push(WorktreeHint {
+                            worktree_id: worktree.id.clone(),
+                            branch: worktree.branch.clone(),
+                            hint_type: "stale".to_string(),
+                            message: format!("分支 '{}' 已 {} 天未更新", worktree.branch, inactive_days),
+                            is_merged: false,
+                            inactive_days: Some(inactive_days),
+                        });
+                    }
+                }
+            }
+        }
+    }
+    
+    Ok(hints)
 }

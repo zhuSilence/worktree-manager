@@ -200,3 +200,35 @@ pub struct RepositoryInfo {
     /// 最后活跃时间
     pub last_active: Option<String>,
 }
+
+/// 切换分支结果
+#[derive(Debug, Serialize)]
+pub struct SwitchBranchResult {
+    pub success: bool,
+    pub message: String,
+}
+
+/// 批量删除结果
+#[derive(Debug, Serialize)]
+pub struct BatchDeleteResult {
+    pub success_count: usize,
+    pub failed_count: usize,
+    pub results: Vec<WorktreeResult>,
+}
+
+/// Worktree 提示信息
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorktreeHint {
+    /// Worktree ID
+    pub worktree_id: String,
+    /// 分支名
+    pub branch: String,
+    /// 提示类型: "merged" | "stale"
+    pub hint_type: String,
+    /// 提示消息
+    pub message: String,
+    /// 是否已合并
+    pub is_merged: bool,
+    /// 最后活跃天数
+    pub inactive_days: Option<i64>,
+}

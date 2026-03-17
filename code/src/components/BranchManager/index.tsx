@@ -1,0 +1,263 @@
+import { useState } from 'react'
+import { X, GitBranch, Plus, Download, RefreshCw } from 'lucide-react'
+import { gitService } from '@/services/git'
+import { useWorktreeStore } from '@/stores/worktreeStore'
+import { clsx } from 'clsx'
+
+interface BranchManagerProps {
+  isOpen: boolean
+  onClose: () => void
+  worktreePath: string
+  worktreeBranch: string
+  branches: { name: string; isCurrent: boolean }[]
+}
+
+export function BranchManager({ isOpen, onClose, worktreePath, worktreeBranch, branches }: BranchManagerProps) {
+  const { refreshWorktrees } = useWorktreeStore()
+  const [mode, setMode] = useState<'switch' | 'create' | 'fetch'>('switch')
+  const [selectedBranch, setSelectedBranch] = useState('')
+  const [newBranchName, setNewBranchName] = useState('')
+  const [baseBranch, setBaseBranch] = useState('')
+  const [remoteBranch, setRemoteBranch] = useState('')
+  const [localBranchName, setLocalBranchName] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+
+  if (!isOpen) return null
+
+  const handleSwitchBranch = async () => {
+    if (!selectedBranch) return
+    setIsLoading(true)
+    setMessage(null)
+    try {
+      const result = await gitService.switchBranch(worktreePath, selectedBranch)
+      if (result.success) {
+        setMessage({ type: 'success', text: result.message })
+        await refreshWorktrees()
+        setTimeout(onClose, 1500)
+      } else {
+        setMessage({ type: 'error', text: result.message })
+      }
+    } catch (err) {
+      setMessage({ type: 'error', text: err instanceof Error ? err.message : '切换失败' })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleCreateBranch = async () => {
+    if (!newBranchName) return
+    setIsLoading(true)
+    setMessage(null)
+    try {
+      const result = await gitService.createBranch(worktreePath, newBranchName, baseBranch || undefined)
+      if (result.success) {
+        setMessage({ type: 'success', text: result.message })
+        await refreshWorktrees()
+        setTimeout(onClose, 1500)
+      } else {
+        setMessage({ type: 'error', text: result.message })
+      }
+    } catch (err) {
+      setMessage({ type: 'error', text: err instanceof Error ? err.message : '创建失败' })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleFetchRemoteBranch = async () => {
+    if (!remoteBranch) return
+    setIsLoading(true)
+    setMessage(null)
+    try {
+      const result = await gitService.fetchRemoteBranch(worktreePath, remoteBranch, localBranchName || undefined)
+      if (result.success) {
+        setMessage({ type: 'success', text: result.message })
+        await refreshWorktrees()
+        setTimeout(onClose, 1500)
+      } else {
+        setMessage({ type: 'error', text: result.message })
+      }
+    } catch (err) {
+      setMessage({ type: 'error', text: err instanceof Error ? err.message : '拉取失败' })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md mx-4">
+        {/* 头部 */}
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+            <GitBranch className="w-5 h-5" />
+            分支管理
+          </h2>
+          <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* 模式切换 */}
+        <div className="flex border-b border-gray-200 dark:border-gray-700">
+          <button
+            onClick={() => setMode('switch')}
+            className={clsx(
+              'flex-1 py-2 text-sm font-medium transition-colors',
+              mode === 'switch' 
+                ? 'text-green-600 dark:text-green-400 border-b-2 border-green-500' 
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+            )}
+          >
+            切换分支
+          </button>
+          <button
+            onClick={() => setMode('create')}
+            className={clsx(
+              'flex-1 py-2 text-sm font-medium transition-colors',
+              mode === 'create' 
+                ? 'text-green-600 dark:text-green-400 border-b-2 border-green-500' 
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+            )}
+          >
+            创建分支
+          </button>
+          <button
+            onClick={() => setMode('fetch')}
+            className={clsx(
+              'flex-1 py-2 text-sm font-medium transition-colors',
+              mode === 'fetch' 
+                ? 'text-green-600 dark:text-green-400 border-b-2 border-green-500' 
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+            )}
+          >
+            拉取远程
+          </button>
+        </div>
+
+        {/* 内容 */}
+        <div className="p-4">
+          {mode === 'switch' && (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  选择分支
+                </label>
+                <select
+                  value={selectedBranch}
+                  onChange={(e) => setSelectedBranch(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                >
+                  <option value="">选择一个分支...</option>
+                  {branches.filter(b => !b.isCurrent).map((b) => (
+                    <option key={b.name} value={b.name}>{b.name}</option>
+                  ))}
+                </select>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  当前分支: {worktreeBranch}
+                </p>
+              </div>
+              <button
+                onClick={handleSwitchBranch}
+                disabled={!selectedBranch || isLoading}
+                className="w-full py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {isLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <GitBranch className="w-4 h-4" />}
+                切换
+              </button>
+            </div>
+          )}
+
+          {mode === 'create' && (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  新分支名
+                </label>
+                <input
+                  type="text"
+                  value={newBranchName}
+                  onChange={(e) => setNewBranchName(e.target.value)}
+                  placeholder="feature/new-feature"
+                  className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  基于分支 (可选)
+                </label>
+                <select
+                  value={baseBranch}
+                  onChange={(e) => setBaseBranch(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                >
+                  <option value="">当前分支 ({worktreeBranch})</option>
+                  {branches.filter(b => !b.isCurrent).map((b) => (
+                    <option key={b.name} value={b.name}>{b.name}</option>
+                  ))}
+                </select>
+              </div>
+              <button
+                onClick={handleCreateBranch}
+                disabled={!newBranchName || isLoading}
+                className="w-full py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {isLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                创建并切换
+              </button>
+            </div>
+          )}
+
+          {mode === 'fetch' && (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  远程分支名
+                </label>
+                <input
+                  type="text"
+                  value={remoteBranch}
+                  onChange={(e) => setRemoteBranch(e.target.value)}
+                  placeholder="origin/feature"
+                  className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  本地分支名 (可选)
+                </label>
+                <input
+                  type="text"
+                  value={localBranchName}
+                  onChange={(e) => setLocalBranchName(e.target.value)}
+                  placeholder="默认与远程分支同名"
+                  className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                />
+              </div>
+              <button
+                onClick={handleFetchRemoteBranch}
+                disabled={!remoteBranch || isLoading}
+                className="w-full py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {isLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                拉取并切换
+              </button>
+            </div>
+          )}
+
+          {/* 消息 */}
+          {message && (
+            <div className={clsx(
+              'mt-4 p-3 rounded-lg text-sm',
+              message.type === 'success' ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400' : 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'
+            )}>
+              {message.text}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}

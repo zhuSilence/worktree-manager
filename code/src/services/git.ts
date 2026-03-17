@@ -8,6 +8,9 @@ import type {
   DiffResponse,
   DetailedDiffResponse,
   RepositoryInfo,
+  SwitchBranchResult,
+  BatchDeleteResult,
+  WorktreeHint,
 } from '@/types/worktree'
 import type { IdeType, TerminalType } from '@/stores/settingsStore'
 
@@ -121,5 +124,47 @@ export const gitService = {
    */
   async getRepositoryInfo(repoPath: string): Promise<RepositoryInfo> {
     return invoke<RepositoryInfo>('get_repository_info', { repoPath })
+  },
+
+  /**
+   * 切换分支
+   */
+  async switchBranch(worktreePath: string, branchName: string): Promise<SwitchBranchResult> {
+    return invoke<SwitchBranchResult>('switch_branch', { worktreePath, branchName })
+  },
+
+  /**
+   * 创建并切换到新分支
+   */
+  async createBranch(worktreePath: string, branchName: string, baseBranch?: string): Promise<SwitchBranchResult> {
+    return invoke<SwitchBranchResult>('create_branch', { worktreePath, branchName, baseBranch })
+  },
+
+  /**
+   * 拉取远程分支
+   */
+  async fetchRemoteBranch(repoPath: string, remoteBranch: string, localBranch?: string): Promise<SwitchBranchResult> {
+    return invoke<SwitchBranchResult>('fetch_remote_branch', { repoPath, remoteBranch, localBranch })
+  },
+
+  /**
+   * 批量删除 worktree
+   */
+  async batchDeleteWorktrees(repoPath: string, worktreePaths: string[], force: boolean): Promise<BatchDeleteResult> {
+    return invoke<BatchDeleteResult>('batch_delete_worktrees', { repoPath, worktreePaths, force })
+  },
+
+  /**
+   * 获取已合并提示
+   */
+  async getMergedHints(repoPath: string, mainBranch: string): Promise<WorktreeHint[]> {
+    return invoke<WorktreeHint[]>('get_merged_hints', { repoPath, mainBranch })
+  },
+
+  /**
+   * 获取陈旧提示
+   */
+  async getStaleHints(repoPath: string, days: number): Promise<WorktreeHint[]> {
+    return invoke<WorktreeHint[]>('get_stale_hints', { repoPath, days })
   },
 }
