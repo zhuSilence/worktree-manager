@@ -13,9 +13,10 @@ type SortOrder = 'asc' | 'desc'
 
 interface WorktreeListProps {
   onCreateWorktree?: () => void
+  onShowDiff?: (path: string, name: string) => void
 }
 
-export function WorktreeList({ onCreateWorktree }: WorktreeListProps) {
+export function WorktreeList({ onCreateWorktree, onShowDiff }: WorktreeListProps) {
   const { worktrees, isLoading, currentRepo } = useWorktreeStore()
   const [searchQuery, setSearchQuery] = useState('')
   const [sortField, setSortField] = useState<SortField>('name')
@@ -174,7 +175,7 @@ export function WorktreeList({ onCreateWorktree }: WorktreeListProps) {
       {/* 列表 */}
       <div className="space-y-2">
         {filteredAndSortedWorktrees.map((worktree) => (
-          <WorktreeItem key={worktree.id} worktree={worktree} branches={branches} />
+          <WorktreeItem key={worktree.id} worktree={worktree} branches={branches} onShowDiff={onShowDiff} />
         ))}
       </div>
       

@@ -5,6 +5,7 @@ import { WorktreeList } from './components/WorktreeList'
 import { CreateWorktreeDialog } from './components/CreateWorktreeDialog'
 import { SettingsPanel } from './components/SettingsPanel'
 import { Sidebar } from './components/Sidebar'
+import { DiffSidebar } from './components/DiffSidebar'
 import { useWorktreeStore } from './stores/worktreeStore'
 import { useRepositoryStore } from './stores/repositoryStore'
 import type { RepositoryInfo } from './types/worktree'
@@ -14,6 +15,7 @@ function App() {
   const { repositories, activeRepoId } = useRepositoryStore()
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+  const [diffWorktree, setDiffWorktree] = useState<{ path: string; name: string } | null>(null)
 
   // 当活动仓库改变时，加载仓库数据
   useEffect(() => {
@@ -33,13 +35,13 @@ function App() {
         onOpenSettings={() => setShowSettings(true)}
       />
       <div className="flex-1 flex overflow-hidden">
-        {/* 侧边栏 */}
+        {/* 左侧边栏 */}
         <Sidebar 
           onRepoSelect={handleRepoSelect}
         />
         
         {/* 主内容区 */}
-        <Main>
+        <Main className="flex-1">
           {isLoading && (
             <div className="flex items-center justify-center h-64">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
@@ -53,7 +55,10 @@ function App() {
           )}
           
           {!isLoading && !error && currentRepo && (
-            <WorktreeList onCreateWorktree={() => setShowCreateDialog(true)} />
+            <WorktreeList 
+              onCreateWorktree={() => setShowCreateDialog(true)}
+              onShowDiff={(path, name) => setDiffWorktree({ path, name })}
+            />
           )}
           
           {!isLoading && !error && !currentRepo && repositories.length === 0 && (
@@ -76,6 +81,16 @@ function App() {
             </div>
           )}
         </Main>
+
+        {/* 右侧 Diff 边栏 */}
+        {diffWorktree && (
+          <DiffSidebar
+            isOpen={true}
+            onClose={() => setDiffWorktree(null)}
+            worktreePath={diffWorktree.path}
+            worktreeName={diffWorktree.name}
+          />
+        )}
       </div>
       
       {/* 创建 Worktree 对话框 */}

@@ -5,20 +5,19 @@ import { Folder, ExternalLink, Terminal, Trash2, GitCompare, GitBranch } from 'l
 import { gitService } from '@/services/git'
 import { useWorktreeStore } from '@/stores/worktreeStore'
 import { settingsStore } from '@/stores/settingsStore'
-import { DiffPanel } from '@/components/DiffPanel'
 import { BranchManager } from '@/components/BranchManager'
 
 interface WorktreeItemProps {
   worktree: Worktree
   branches: { name: string; isCurrent: boolean }[]
+  onShowDiff?: (path: string, name: string) => void
 }
 
-export function WorktreeItem({ worktree, branches }: WorktreeItemProps) {
+export function WorktreeItem({ worktree, branches, onShowDiff }: WorktreeItemProps) {
   const { deleteWorktree } = useWorktreeStore()
   const { defaultIde, defaultTerminal } = settingsStore()
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
-  const [showDiff, setShowDiff] = useState(false)
   const [showBranchManager, setShowBranchManager] = useState(false)
 
   const handleOpenInTerminal = async () => {
@@ -125,7 +124,7 @@ export function WorktreeItem({ worktree, branches }: WorktreeItemProps) {
               <GitBranch className="w-4 h-4" />
             </button>
             <button
-              onClick={() => setShowDiff(true)}
+              onClick={() => onShowDiff?.(worktree.path, worktree.name)}
               className="p-2 text-gray-500 hover:text-purple-600 dark:text-gray-400 dark:hover:text-purple-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
               title="查看与主分支差异"
             >
@@ -197,14 +196,6 @@ export function WorktreeItem({ worktree, branches }: WorktreeItemProps) {
           </div>
         </div>
       )}
-
-      {/* Diff 面板 */}
-      <DiffPanel
-        isOpen={showDiff}
-        onClose={() => setShowDiff(false)}
-        worktreePath={worktree.path}
-        worktreeName={worktree.name}
-      />
 
       {/* 分支管理 */}
       <BranchManager
