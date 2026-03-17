@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react'
-import { X, FileText, Plus, Minus, RefreshCw, GitCompare, ChevronDown, ChevronRight, Columns, AlignLeft, ArrowUp } from 'lucide-react'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { X, FileText, Plus, Minus, RefreshCw, GitCompare, ChevronDown, ChevronRight, Columns, AlignLeft, ArrowUp, GripVertical } from 'lucide-react'
 import { gitService } from '@/services/git'
 import type { DetailedDiffResponse, FileDiff, DiffHunk, DiffLine } from '@/types/worktree'
 import { clsx } from 'clsx'
@@ -13,6 +13,10 @@ interface DiffSidebarProps {
 
 type ViewMode = 'unified' | 'split'
 
+const MIN_WIDTH = 400
+const MAX_WIDTH = 1000
+const DEFAULT_WIDTH = 600
+
 export function DiffSidebar({ isOpen, onClose, worktreePath, worktreeName }: DiffSidebarProps) {
   const [diff, setDiff] = useState<DetailedDiffResponse | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -21,7 +25,49 @@ export function DiffSidebar({ isOpen, onClose, worktreePath, worktreeName }: Dif
   const [viewMode, setViewMode] = useState<ViewMode>('unified')
   const [expandedFiles, setExpandedFiles] = useState<Set<string>>(new Set())
   const [selectedLine, setSelectedLine] = useState<string | null>(null)
+  const [width, setWidth] = useState(DEFAULT_WIDTH)
+  const [isDragging, setIsDragging] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
+  const sidebarRef = useRef<HTMLDivElement>(null)
+
+  // 拖拽处理
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    setIsDragging(true)
+  }, [])
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (!isDragging) return
+    
+    const newWidth = window.innerWidth - e.clientX
+    const clampedWidth = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, newWidth))
+    setWidth(clampedWidth)
+  }, [isDragging])
+
+  const handleMouseUp = useCallback(() => {
+    setIsDragging(false)
+  }, [])
+
+  useEffect(() => {
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove)
+      document.addEventListener('mouseup', handleMouseUp)
+      document.body.style.cursor = 'ew-resize'
+      document.body.style.userSelect = 'none'
+    } else {
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    }
+    
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    }
+  }, [isDragging, handleMouseMove, handleMouseUp])
 
   useEffect(() => {
     if (isOpen) {
@@ -150,7 +196,25 @@ export function DiffSidebar({ isOpen, onClose, worktreePath, worktreeName }: Dif
   }
 
   return (
-    <div className="w-[600px] h-full bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 flex flex-col">
+    <div 
+      ref={sidebarRef}
+      className="h-full bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 flex flex-col relative"
+      style={{ width: `${width}px`, minWidth: `${MIN_WIDTH}px`, maxWidth: `${MAX_WIDTH}px` }}
+    >
+      {/* 拖拽把手 */}
+      <div
+        onMouseDown={handleMouseDown}
+        className={clsx(
+          'absolute left-0 top-0 bottom-0 w-1 cursor-ew-resize group z-20',
+          'hover:bg-purple-500/30 transition-colors',
+          isDragging && 'bg-purple-500/50'
+        )}
+      >
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <GripVertical className="w-3 h-3 text-gray-400" />
+        </div>
+      </div>
+
       {/* 头部 */}
       <div className="flex items-center justify-between p-3 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
         <div className="flex items-center gap-2 min-w-0">
