@@ -257,9 +257,21 @@ homebrew-git-worktree-manager/
 └── README.md
 ```
 
-### 更新 Cask 文件
+### 自动更新（推荐）
 
-每次发布新版本时，需要更新 Cask 文件：
+项目已配置自动化 workflow `.github/workflows/update-tap.yml`。
+
+当 Release 发布时，会自动：
+1. 下载 DMG 文件
+2. 计算 SHA256
+3. 更新 Cask 文件
+4. 推送到 Tap 仓库
+
+**配置要求：** 需要在主仓库添加 `TAP_TOKEN` secret（GitHub Personal Access Token，需要 `repo` 权限）。
+
+### 手动更新 Cask 文件
+
+如果自动更新失败，可以手动更新：
 
 **文件：** `Casks/git-worktree-manager.rb`
 
