@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef, useCallback, memo } from 'react'
-import { X, FileText, Plus, Minus, RefreshCw, GitCompare, ChevronDown, ChevronRight, Columns, AlignLeft, ArrowUp, GripVertical, Copy, Check, ChevronsDown } from 'lucide-react'
+import { useState, useEffect, useRef, useCallback, memo, useMemo } from 'react'
+import { X, FileText, Plus, Minus, RefreshCw, GitCompare, ChevronDown, ChevronRight, Columns, AlignLeft, ArrowUp, GripVertical, Copy, Check, ChevronsDown, LayoutList, Folder, FolderOpen } from 'lucide-react'
 import { gitService } from '@/services/git'
 import type { DetailedDiffResponse, FileDiff, DiffHunk, DiffLine } from '@/types/worktree'
 import { clsx } from 'clsx'
@@ -118,6 +118,144 @@ const syntaxColors: Record<string, string> = {
   normal: '',
 }
 
+// ─── 文件树数据结构 ──────────────────────────────────────────────
+interface FileTreeNode {
+  name: string
+  fullPath: string
+  isFile: boolean
+  status?: string
+  additions?: number
+  deletions?: number
+  children: FileTreeNode[]
+}
+
+function buildFileTree(files: FileDiff[]): FileTreeNode[] {
+  const root: FileTreeNode = { name: '', fullPath: '', isFile: false, children: [] }
+
+  for (const file of files) {
+    const parts = file.path.split('/')
+    let current = root
+    for (let i = 0; i < parts.length; i++) {
+      const isLast = i === parts.length - 1
+      let child = current.children.find(c => c.name === parts[i] && c.isFile === isLast)
+      if (!child) {
+        child = {
+          name: parts[i],
+          fullPath: parts.slice(0, i + 1).join('/'),
+          isFile: isLast,
+          children: [],
+          ...(isLast ? { status: file.status, additions: file.additions, deletions: file.deletions } : {}),
+        }
+        current.children.push(child)
+      }
+      current = child
+    }
+  }
+
+  // 压缩只有单个子目录的中间节点: a/ -> b/ -> c 变成 a/b/ -> c
+  function compact(node: FileTreeNode): FileTreeNode {
+    if (!node.isFile && node.children.length === 1 && !node.children[0].isFile) {
+      const child = node.children[0]
+      return compact({
+        ...child,
+        name: node.name ? `${node.name}/${child.name}` : child.name,
+        children: child.children,
+      })
+    }
+    return { ...node, children: node.children.map(compact) }
+  }
+
+  // 排序：目录在前，文件在后，同类按名称排序
+  function sortTree(nodes: FileTreeNode[]): FileTreeNode[] {
+    return nodes
+      .map(n => ({ ...n, children: sortTree(n.children) }))
+      .sort((a, b) => {
+        if (a.isFile !== b.isFile) return a.isFile ? 1 : -1
+        return a.name.localeCompare(b.name)
+      })
+  }
+
+  return sortTree(root.children.map(compact))
+}
+
+// ─── 文件树节点组件 ──────────────────────────────────────────────
+function FileTreeNodeItem({
+  node, depth, activeFile, onFileClick, expandedDirs, toggleDir,
+}: {
+  node: FileTreeNode
+  depth: number
+  activeFile: string | null
+  onFileClick: (path: string) => void
+  expandedDirs: Set<string>
+  toggleDir: (path: string) => void
+}) {
+  if (node.isFile) {
+    return (
+      <button
+        onClick={() => onFileClick(node.fullPath)}
+        className={clsx(
+          'w-full text-left py-1 pr-2 text-[11px] hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-1 transition-colors',
+          activeFile === node.fullPath && 'bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
+        )}
+        style={{ paddingLeft: `${depth * 12 + 8}px` }}
+        title={node.fullPath}
+      >
+        <span className={clsx(
+          'w-1.5 h-1.5 rounded-full flex-shrink-0',
+          node.status === 'added' && 'bg-green-500',
+          node.status === 'deleted' && 'bg-red-500',
+          node.status === 'modified' && 'bg-yellow-500',
+          node.status === 'renamed' && 'bg-blue-500',
+        )} />
+        <FileText className="w-3 h-3 text-gray-400 flex-shrink-0" />
+        <span className="truncate font-medium">{node.name}</span>
+      </button>
+    )
+  }
+
+  const isExpanded = expandedDirs.has(node.fullPath)
+  return (
+    <div>
+      <button
+        onClick={() => toggleDir(node.fullPath)}
+        className="w-full text-left py-1 pr-2 text-[11px] hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-1 text-gray-600 dark:text-gray-400 transition-colors"
+        style={{ paddingLeft: `${depth * 12 + 8}px` }}
+      >
+        {isExpanded ? (
+          <ChevronDown className="w-3 h-3 flex-shrink-0 text-gray-400" />
+        ) : (
+          <ChevronRight className="w-3 h-3 flex-shrink-0 text-gray-400" />
+        )}
+        {isExpanded ? (
+          <FolderOpen className="w-3 h-3 flex-shrink-0 text-yellow-500" />
+        ) : (
+          <Folder className="w-3 h-3 flex-shrink-0 text-yellow-500" />
+        )}
+        <span className="truncate">{node.name}</span>
+        <span className="ml-auto text-[10px] text-gray-400 flex-shrink-0">
+          {countFiles(node)}
+        </span>
+      </button>
+      {isExpanded && node.children.map(child => (
+        <FileTreeNodeItem
+          key={child.fullPath}
+          node={child}
+          depth={depth + 1}
+          activeFile={activeFile}
+          onFileClick={onFileClick}
+          expandedDirs={expandedDirs}
+          toggleDir={toggleDir}
+        />
+      ))}
+    </div>
+  )
+}
+
+function countFiles(node: FileTreeNode): number {
+  if (node.isFile) return 1
+  return node.children.reduce((sum, c) => sum + countFiles(c), 0)
+}
+
 export function DiffSidebar({ isOpen, onClose, worktreePath, worktreeName, branches = [], defaultBranch = 'main', fillWidth = false }: DiffSidebarProps) {
   const [diff, setDiff] = useState<DetailedDiffResponse | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -128,9 +266,13 @@ export function DiffSidebar({ isOpen, onClose, worktreePath, worktreeName, branc
   const [selectedLine, setSelectedLine] = useState<string | null>(null)
   const [width, setWidth] = useState(() => {
     const saved = localStorage.getItem(STORAGE_KEY)
-    return saved ? Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, Number(saved))) : DEFAULT_WIDTH
+    const maxW = typeof window !== 'undefined' ? window.innerWidth - 350 : MAX_WIDTH
+    return saved ? Math.min(maxW, Math.max(MIN_WIDTH, Number(saved))) : DEFAULT_WIDTH
   })
   const [isDragging, setIsDragging] = useState(false)
+  const [showFileTree, setShowFileTree] = useState(true)
+  const [activeFile, setActiveFile] = useState<string | null>(null)
+  const [expandedDirs, setExpandedDirs] = useState<Set<string>>(new Set())
   const scrollRef = useRef<HTMLDivElement>(null)
   const sidebarRef = useRef<HTMLDivElement>(null)
 
@@ -144,7 +286,8 @@ export function DiffSidebar({ isOpen, onClose, worktreePath, worktreeName, branc
     if (!isDragging) return
 
     const newWidth = window.innerWidth - e.clientX
-    const clampedWidth = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, newWidth))
+    const dynamicMax = window.innerWidth - 350 // leave space for left panels
+    const clampedWidth = Math.min(dynamicMax, Math.max(MIN_WIDTH, newWidth))
     setWidth(clampedWidth)
   }, [isDragging])
 
@@ -241,6 +384,60 @@ export function DiffSidebar({ isOpen, onClose, worktreePath, worktreeName, branc
     }
   }
 
+  // 构建文件树
+  const fileTree = useMemo(() => {
+    if (!diff) return []
+    return buildFileTree(diff.files)
+  }, [diff])
+
+  // diff 加载后自动展开所有目录
+  useEffect(() => {
+    if (!diff) return
+    const allDirs = new Set<string>()
+    for (const file of diff.files) {
+      const parts = file.path.split('/')
+      // 构建所有可能的目录路径（包括压缩后的路径）
+      for (let i = 1; i < parts.length; i++) {
+        allDirs.add(parts.slice(0, i).join('/'))
+      }
+    }
+    // 同时收集压缩后的目录路径
+    function collectDirs(nodes: FileTreeNode[]) {
+      for (const n of nodes) {
+        if (!n.isFile) {
+          allDirs.add(n.fullPath)
+          collectDirs(n.children)
+        }
+      }
+    }
+    collectDirs(fileTree)
+    setExpandedDirs(allDirs)
+  }, [diff, fileTree])
+
+  const toggleDir = (path: string) => {
+    setExpandedDirs(prev => {
+      const next = new Set(prev)
+      if (next.has(path)) next.delete(path)
+      else next.add(path)
+      return next
+    })
+  }
+
+  // 滚动到指定文件
+  const scrollToFile = (path: string) => {
+    if (!diff) return
+    const fileIdx = diff.files.findIndex(f => f.path === path)
+    if (fileIdx < 0) return
+    setActiveFile(path)
+    setExpandedFiles(prev => new Set([...prev, path]))
+    setTimeout(() => {
+      const el = document.getElementById(`file-diff-${fileIdx}`)
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }
+    }, 50)
+  }
+
   const scrollToLine = (fileIdx: number, hunkIdx: number, lineIdx: number) => {
     const id = `diff-${fileIdx}-${hunkIdx}-${lineIdx}`
     setSelectedLine(id)
@@ -331,7 +528,7 @@ export function DiffSidebar({ isOpen, onClose, worktreePath, worktreeName, branc
       className="h-full bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 flex flex-col relative overflow-hidden"
       style={fillWidth
         ? { flex: '1 1 0%', minWidth: `${MIN_WIDTH}px` }
-        : { width: `${width}px`, minWidth: `${MIN_WIDTH}px`, maxWidth: `${MAX_WIDTH}px` }
+        : { width: `${width}px`, minWidth: `${MIN_WIDTH}px` }
       }
     >
       {/* 拖拽把手 */}
@@ -404,6 +601,20 @@ export function DiffSidebar({ isOpen, onClose, worktreePath, worktreeName, branc
             </button>
           </div>
 
+          {/* 文件树切换 */}
+          <button
+            onClick={() => setShowFileTree(!showFileTree)}
+            className={clsx(
+              'p-1 rounded transition-colors',
+              showFileTree
+                ? 'text-purple-500 bg-purple-50 dark:bg-purple-900/30'
+                : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
+            )}
+            title={showFileTree ? '隐藏文件列表' : '显示文件列表'}
+          >
+            <LayoutList className="w-3.5 h-3.5" />
+          </button>
+
           {/* 分支选择 */}
           <select
             value={targetBranch}
@@ -439,7 +650,29 @@ export function DiffSidebar({ isOpen, onClose, worktreePath, worktreeName, branc
       </div>
 
       {/* 内容 */}
-      <div ref={scrollRef} className="flex-1 overflow-auto">
+      <div className="flex-1 flex overflow-hidden min-h-0">
+        {/* 文件树面板 */}
+        {showFileTree && !isLoading && !error && diff && diff.files.length > 0 && (
+          <div className="w-56 flex-shrink-0 border-r border-gray-200 dark:border-gray-700 flex flex-col bg-gray-50/50 dark:bg-gray-900/50">
+            <div className="p-2 text-[11px] font-medium text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+              文件 ({diff.files.length})
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              {fileTree.map(node => (
+                <FileTreeNodeItem
+                  key={node.fullPath}
+                  node={node}
+                  depth={0}
+                  activeFile={activeFile}
+                  onFileClick={scrollToFile}
+                  expandedDirs={expandedDirs}
+                  toggleDir={toggleDir}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+        <div ref={scrollRef} className="flex-1 overflow-auto">
         {isLoading && (
           <div className="flex items-center justify-center h-32">
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-500"></div>
@@ -514,7 +747,7 @@ export function DiffSidebar({ isOpen, onClose, worktreePath, worktreeName, branc
             ) : (
               <div className="divide-y divide-gray-200 dark:divide-gray-700">
                 {diff.files.map((file: FileDiff, fileIdx: number) => (
-                  <div key={file.path} className="border-b border-gray-200 dark:border-gray-700 last:border-b-0">
+                  <div key={file.path} id={`file-diff-${fileIdx}`} className="border-b border-gray-200 dark:border-gray-700 last:border-b-0">
                     {/* 文件头部 */}
                     <div
                       className="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-gray-900 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
@@ -559,6 +792,7 @@ export function DiffSidebar({ isOpen, onClose, worktreePath, worktreeName, branc
             )}
           </>
         )}
+      </div>
       </div>
     </div>
   )
