@@ -91,6 +91,26 @@ brew tap zhuSilence/git-worktree-manager
 brew install git-worktree-manager
 ```
 
+### ⚠️ macOS 安全提示
+
+首次打开应用时，macOS 可能会提示 **"无法验证开发者"**，这是因为应用未经 Apple 公证。
+
+**解决方法：**
+
+**方法 1：右键打开（推荐）**
+1. 在 Finder 中找到 **Git Worktree Manager.app**
+2. **右键点击** → 选择 **打开**
+3. 点击弹出的 **打开** 按钮确认
+
+**方法 2：系统设置允许**
+1. 打开 **系统设置** → **隐私与安全性**
+2. 在底部找到 **仍要打开** 按钮，点击允许
+
+**方法 3：命令行移除隔离属性**
+```bash
+xattr -cr "/Applications/Git Worktree Manager.app"
+```
+
 ---
 
 ## 🛠️ 从源码构建
