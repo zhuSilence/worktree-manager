@@ -40,7 +40,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDM0OTBBODIyRUEwQzQ2MApSV1JneEtBdWdncEpBKzI2SFpEVDE3bDByRE1qcnRVSUdXZXFFMXVJUERNL0UrWG8xU2xWUW1TQQo=",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDYwM0E2NUVFNjQ0NTQxRjEKUldUeFFVVms3bVU2WUw3TkM2Z3VLVFFjTDJZRFlydk00dWlMeVFveFpPelpBeGQ5WE9KYU5VdmMK",
       "endpoints": [
         "https://github.com/zhuSilence/git-worktree-manager/releases/latest/download/{{target}}-{{arch}}.json"
       ]
