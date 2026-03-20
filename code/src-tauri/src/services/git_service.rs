@@ -539,26 +539,20 @@ pub fn get_diff(worktree_path: &str, target_branch: &str) -> anyhow::Result<Diff
     let source_branch = head.shorthand().unwrap_or("HEAD").to_string();
 
     // 查找目标分支的 commit
-    let target_commit = find_target_commit(&repo, target_branch)?;
+    let _target_commit = find_target_commit(&repo, target_branch)?;
 
     // 获取当前 HEAD commit
-    let source_commit = head.peel_to_commit()?;
-
-    // 执行 diff
-    let _diff = repo.diff_tree_to_tree(
-        Some(&target_commit.as_object().peel_to_tree()?),
-        Some(&source_commit.as_object().peel_to_tree()?),
-        None,
-    )?;
+    let _source_commit = head.peel_to_commit()?;
 
     // 统计文件变更
     let mut files: Vec<DiffStats> = Vec::new();
     let mut total_additions = 0;
     let mut total_deletions = 0;
 
-    // 使用 git diff 命令获取更详细的统计
+    // 使用 git diff 命令获取统计
+    // 注意：使用 target_branch 而不是 target_branch...HEAD，这样会包含工作区的未提交修改
     let output = Command::new("git")
-        .args(["diff", "--numstat", &format!("{}...{}", target_branch, source_branch)])
+        .args(["diff", "--numstat", target_branch])
         .current_dir(worktree_path)
         .output()?;
 
@@ -633,8 +627,9 @@ pub fn get_detailed_diff(worktree_path: &str, target_branch: &str) -> anyhow::Re
     let mut total_deletions = 0;
 
     // 使用 git diff 命令获取更可靠的结果
+    // 注意：使用 target_branch 而不是 target_branch...HEAD，这样会包含工作区的未提交修改
     let output = Command::new("git")
-        .args(["diff", &format!("{}...{}", target_branch, source_branch)])
+        .args(["diff", target_branch])
         .current_dir(worktree_path)
         .output()?;
 

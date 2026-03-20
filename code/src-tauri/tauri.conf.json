@@ -35,6 +35,15 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDM0OTBBODIyRUEwQzQ2MApSV1JneEtBdWdncEpBKzI2SFpEVDE3bDByRE1qcnRVSUdXZXFFMXVJUERNL0UrWG8xU2xWUW1TQQo=",
+      "endpoints": [
+        "https://github.com/zhuSilence/git-worktree-manager/releases/latest/download/{{target}}-{{arch}}.json"
+      ]
+    }
   }
 }

@@ -45,6 +45,8 @@ jobs:
           npx tauri build --target aarch64-apple-darwin
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -52,6 +54,7 @@ jobs:
           name: macos-arm64
           path: |
             code/src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
+            code/src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg.sig
 
   build-macos-x64:
     runs-on: macos-15-intel  # Intel runner
@@ -82,6 +85,8 @@ jobs:
           npx tauri build
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -89,6 +94,7 @@ jobs:
           name: macos-x64
           path: |
             code/src-tauri/target/release/bundle/dmg/*.dmg
+            code/src-tauri/target/release/bundle/dmg/*.dmg.sig
 
   build-linux:
     runs-on: ubuntu-22.04
@@ -124,6 +130,8 @@ jobs:
           npx tauri build
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -131,7 +139,9 @@ jobs:
           name: linux-x64
           path: |
             code/src-tauri/target/release/bundle/deb/*.deb
+            code/src-tauri/target/release/bundle/deb/*.deb.sig
             code/src-tauri/target/release/bundle/appimage/*.AppImage
+            code/src-tauri/target/release/bundle/appimage/*.AppImage.sig
 
   build-windows:
     runs-on: windows-latest
@@ -162,6 +172,8 @@ jobs:
           npx tauri build
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -169,7 +181,9 @@ jobs:
           name: windows-x64
           path: |
             code/src-tauri/target/release/bundle/msi/*.msi
+            code/src-tauri/target/release/bundle/msi/*.msi.sig
             code/src-tauri/target/release/bundle/nsis/*.exe
+            code/src-tauri/target/release/bundle/nsis/*.exe.sig
 
   release:
     needs: [build-macos-arm64, build-macos-x64, build-linux, build-windows]
@@ -177,6 +191,9 @@ jobs:
     if: always() && (needs.build-macos-arm64.result == 'success' || needs.build-macos-x64.result == 'success' || needs.build-linux.result == 'success' || needs.build-windows.result == 'success')
     
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
@@ -184,6 +201,102 @@ jobs:
 
       - name: Display structure of downloaded files
         run: ls -R artifacts
+
+      - name: Get version from tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Generate update manifests
+        run: |
+          VERSION=${{ steps.get_version.VERSION }}
+          PUBLISHED_AT=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          
+          # macOS ARM64
+          if [ -f "artifacts/macos-arm64/"*".dmg" ]; then
+            DMG_FILE=$(ls artifacts/macos-arm64/*.dmg | head -n1)
+            SIG_FILE="${DMG_FILE}.sig"
+            SIGNATURE=$(cat "$SIG_FILE" 2>/dev/null || echo "")
+            DMG_NAME=$(basename "$DMG_FILE")
+            
+            cat > darwin-aarch64.json << EOF
+          {
+            "version": "$VERSION",
+            "pub_date": "$PUBLISHED_AT",
+            "platforms": {
+              "darwin-aarch64": {
+                "signature": "$SIGNATURE",
+                "url": "https://github.com/zhuSilence/git-worktree-manager/releases/download/v${VERSION}/${DMG_NAME}"
+              }
+            }
+          }
+          EOF
+          fi
+
+          # macOS x64
+          if [ -f "artifacts/macos-x64/"*".dmg" ]; then
+            DMG_FILE=$(ls artifacts/macos-x64/*.dmg | head -n1)
+            SIG_FILE="${DMG_FILE}.sig"
+            SIGNATURE=$(cat "$SIG_FILE" 2>/dev/null || echo "")
+            DMG_NAME=$(basename "$DMG_FILE")
+            
+            cat > darwin-x86_64.json << EOF
+          {
+            "version": "$VERSION",
+            "pub_date": "$PUBLISHED_AT",
+            "platforms": {
+              "darwin-x86_64": {
+                "signature": "$SIGNATURE",
+                "url": "https://github.com/zhuSilence/git-worktree-manager/releases/download/v${VERSION}/${DMG_NAME}"
+              }
+            }
+          }
+          EOF
+          fi
+
+          # Linux x64
+          if [ -f "artifacts/linux-x64/"*".AppImage" ]; then
+            APPIMAGE_FILE=$(ls artifacts/linux-x64/*.AppImage | head -n1)
+            SIG_FILE="${APPIMAGE_FILE}.sig"
+            SIGNATURE=$(cat "$SIG_FILE" 2>/dev/null || echo "")
+            APPIMAGE_NAME=$(basename "$APPIMAGE_FILE")
+            
+            cat > linux-x86_64.json << EOF
+          {
+            "version": "$VERSION",
+            "pub_date": "$PUBLISHED_AT",
+            "platforms": {
+              "linux-x86_64": {
+                "signature": "$SIGNATURE",
+                "url": "https://github.com/zhuSilence/git-worktree-manager/releases/download/v${VERSION}/${APPIMAGE_NAME}"
+              }
+            }
+          }
+          EOF
+          fi
+
+          # Windows x64
+          if [ -f "artifacts/windows-x64/"*".exe" ]; then
+            EXE_FILE=$(ls artifacts/windows-x64/*.exe | head -n1)
+            SIG_FILE="${EXE_FILE}.sig"
+            SIGNATURE=$(cat "$SIG_FILE" 2>/dev/null || echo "")
+            EXE_NAME=$(basename "$EXE_FILE")
+            
+            cat > win-x86_64.json << EOF
+          {
+            "version": "$VERSION",
+            "pub_date": "$PUBLISHED_AT",
+            "platforms": {
+              "win-x86_64": {
+                "signature": "$SIGNATURE",
+                "url": "https://github.com/zhuSilence/git-worktree-manager/releases/download/v${VERSION}/${EXE_NAME}"
+              }
+            }
+          }
+          EOF
+          fi
+
+          echo "Generated update manifests:"
+          ls -la *.json 2>/dev/null || echo "No manifests generated"
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
@@ -205,9 +318,13 @@ jobs:
             
             ## 📝 Changelog
             See [CHANGELOG.md](https://github.com/zhuSilence/git-worktree-manager/blob/main/CHANGELOG.md)
+            
+            ## 🔄 自动更新
+            此版本支持自动更新功能，可在设置中检查更新。
           draft: true
           prerelease: false
           files: |
             artifacts/**/*
+            *.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
