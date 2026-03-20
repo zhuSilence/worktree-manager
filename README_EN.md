@@ -24,6 +24,7 @@ Making Git worktree as easy as slicing a cake 🍰
 - **Status Display** - Visualize Clean/Dirty/Conflict/Detached states
 - **Search & Sort** - Quick filtering by name or status
 - **Diff Comparison** - Code diff against main branch (unified/split view)
+- **Keyboard Shortcuts** - Full keyboard operation support for efficiency
 
 ### 🚀 Enhanced Features (P1)
 
@@ -135,6 +136,20 @@ Click the **warning icon** in the toolbar to view:
 
 - **Merged Branches** - Safe to delete
 - **Stale Branches** - Branches not updated for a long time
+
+### 6. Keyboard Shortcuts
+
+Global keyboard shortcuts are supported for common operations without a mouse:
+
+| Shortcut | Action | Description |
+|----------|--------|-------------|
+| `Cmd/Ctrl + N` | Create Worktree | Open the Create Worktree dialog |
+| `Cmd/Ctrl + R` | Refresh List | Refresh the current repository's worktree list |
+| `Cmd/Ctrl + F` | Focus Search | Move focus to the search box |
+| `Cmd/Ctrl + ,` | Open Settings | Open the settings panel |
+| `Escape` | Close Dialog | Close the current open dialog or panel |
+
+> 💡 **Tip**: Use `Cmd` on macOS, `Ctrl` on Windows/Linux
 
 ---
 

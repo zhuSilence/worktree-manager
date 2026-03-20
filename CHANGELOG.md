@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.6] - 2026-03-20
+
+### ✨ Added
+
+- Auto-update feature
+  - Check for updates in Settings panel
+  - Download and install updates automatically
+  - Progress display during download
+  - Signed update packages for security
+- Diff improvements
+  - Now shows uncommitted changes in diff view
+  - Includes staged and unstaged working directory changes
+
+### 🔧 Changed
+
+- Improved diff comparison to include working directory changes
+- Updated release workflow to generate signed update packages
+
+---
+
 ## [0.0.5] - 2026-03-19
 
 ### ✨ Added
@@ -100,6 +120,7 @@ First release of Git Worktree Manager!
 
 ---
 
-[Unreleased]: https://github.com/zhuSilence/git-worktree-manager/compare/v0.0.5...HEAD
+[Unreleased]: https://github.com/zhuSilence/git-worktree-manager/compare/v0.0.6...HEAD
+[0.0.6]: https://github.com/zhuSilence/git-worktree-manager/compare/v0.0.5...v0.0.6
 [0.0.5]: https://github.com/zhuSilence/git-worktree-manager/compare/v0.0.1...v0.0.5
 [0.0.1]: https://github.com/zhuSilence/git-worktree-manager/releases/tag/v0.0.1

@@ -1,6 +1,6 @@
 [package]
 name = "git-worktree-manager"
-version = "0.0.5"
+version = "0.0.6"
 description = "A lightweight Git Worktree visual manager"
 authors = ["you"]
 edition = "2021"
