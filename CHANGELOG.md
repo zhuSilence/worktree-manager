@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.7] - 2026-03-21
+
+### ✨ Added
+
+- Timeline feature (MVP)
+  - View commit history timeline for worktrees
+- Merged branch reminder
+  - Notify when a branch has been merged to main
+  - Help clean up stale worktrees
+- Repository list persistence
+  - Save and restore repository list across sessions
+  - Detect and warn about invalid repository paths
+
+### 🔧 Changed
+
+- Diff view now uses PR-style comparison (`git diff main...HEAD`)
+  - Only shows changes introduced by current branch
+  - Consistent with GitHub PR diff view
+- Updated app icon with Git branch graph design
+
 ## [0.0.6] - 2026-03-20
 
 ### ✨ Added
