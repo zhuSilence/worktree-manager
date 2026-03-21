@@ -246,6 +246,8 @@ export interface RepositoryInfo {
   worktreeCount: number
   /** 最后活跃时间 */
   lastActive: string | null
+  /** 路径是否有效 */
+  isPathValid?: boolean
 }
 
 /**

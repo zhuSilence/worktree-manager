@@ -15,7 +15,7 @@ import type { RepositoryInfo } from './types/worktree'
 
 function App() {
   const { currentRepo, isLoading, error, loadRepository, refreshWorktrees, worktrees } = useWorktreeStore()
-  const { repositories, activeRepoId, setActiveRepository } = useRepositoryStore()
+  const { repositories, activeRepoId, setActiveRepository, validateRepositories } = useRepositoryStore()
   const { autoRefreshInterval } = settingsStore()
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
@@ -65,6 +65,11 @@ function App() {
       loadRepository(activeRepoId)
     }
   }, [activeRepoId, loadRepository])
+
+  // 应用启动时验证所有仓库路径
+  useEffect(() => {
+    validateRepositories()
+  }, [validateRepositories])
 
   // 自动刷新
   useEffect(() => {
